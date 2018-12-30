@@ -1,0 +1,40 @@
+CREATE SEQUENCE seq_pubkeys;
+CREATE TABLE pubkeys (
+        id int PRIMARY KEY DEFAULT nextval('seq_pubkeys'),
+        public_key text UNIQUE NOT NULL
+);
+
+CREATE SEQUENCE seq_wallet;
+CREATE TABLE wallets (
+        id int PRIMARY KEY DEFAULT nextval('seq_wallet'),
+        pubkeys_id int REFERENCES pubkeys(id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+        cryptocurrency_amount double precision DEFAULT 0,
+        secret_encrypted_hashed text NOT NULL
+        CHECK(cryptocurrency_amount>=0)
+);
+
+
+CREATE SEQUENCE seq_transactions;
+CREATE TABLE transactions (
+	id_transaction int PRIMARY KEY DEFAULT nextval('seq_transactions'),
+	id_from int,
+	id_to int,
+	timestamp bigint
+);
+
+CREATE FUNCTION create_wallet (wallets.secret_encrypted_hashed%type, pubkeys.public_key%type) RETURNS bool as '
+DECLARE
+curr_pubkey_id pubkeys.id%type;
+BEGIN
+INSERT INTO pubkeys (public_key) VALUES ($2);
+SELECT id INTO curr_pubkey_id FROM pubkeys WHERE public_key=$2;
+INSERT INTO wallets (pubkeys_id, secret_encrypted_hashed) VALUES (curr_pubkey_id, $1);
+IF EXISTS (SELECT * FROM wallets WHERE pubkeys_id = curr_pubkey_id) THEN
+RETURN true;
+ELSE
+RETURN false;
+END IF;
+
+END;
+' language 'plpgsql';
+
