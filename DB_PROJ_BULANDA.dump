@@ -1,15 +1,15 @@
-CREATE SEQUENCE seq_pubkeys;
-CREATE TABLE pubkeys (
-        id int PRIMARY KEY DEFAULT nextval('seq_pubkeys'),
-        public_key text UNIQUE NOT NULL
+CREATE SEQUENCE seq_addresses;
+CREATE TABLE addresses (
+        id int PRIMARY KEY DEFAULT nextval('seq_addresses'),
+        address text UNIQUE NOT NULL
 );
 
 CREATE SEQUENCE seq_wallet;
 CREATE TABLE wallets (
         id int PRIMARY KEY DEFAULT nextval('seq_wallet'),
-        pubkeys_id int REFERENCES pubkeys(id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+        addresses_id int REFERENCES addresses(id) ON UPDATE RESTRICT ON DELETE RESTRICT,
         cryptocurrency_amount double precision DEFAULT 0,
-        secret_encrypted_hashed text NOT NULL
+        password_hashed text NOT NULL
         CHECK(cryptocurrency_amount>=0)
 );
 
@@ -22,14 +22,14 @@ CREATE TABLE transactions (
 	timestamp bigint
 );
 
-CREATE FUNCTION create_wallet (wallets.secret_encrypted_hashed%type, pubkeys.public_key%type) RETURNS bool as '
+CREATE FUNCTION create_wallet (wallets.password_hashed%type, addresses.address%type) RETURNS bool as '
 DECLARE
-curr_pubkey_id pubkeys.id%type;
+curr_address_id addresses.id%type;
 BEGIN
-INSERT INTO pubkeys (public_key) VALUES ($2);
-SELECT id INTO curr_pubkey_id FROM pubkeys WHERE public_key=$2;
-INSERT INTO wallets (pubkeys_id, secret_encrypted_hashed) VALUES (curr_pubkey_id, $1);
-IF EXISTS (SELECT * FROM wallets WHERE pubkeys_id = curr_pubkey_id) THEN
+INSERT INTO addresses (address) VALUES ($2);
+SELECT id INTO curr_address_id FROM addresses WHERE address=$2;
+INSERT INTO wallets (addresses_id, password_hashed) VALUES (curr_address_id, $1);
+IF EXISTS (SELECT * FROM wallets WHERE addresses_id = curr_address_id) THEN
 RETURN true;
 ELSE
 RETURN false;

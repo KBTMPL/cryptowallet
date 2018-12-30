@@ -7,13 +7,13 @@
  */
 
 // insert your fancy crypto currency name here
-$crypto_name = 'cryptocurrency';
+$crypto_name = 'Grünerium';
 
 // enter root domain here ending with /
 $root = '';
 
 // establish connection to postgres database
-$db_conn = pg_connect("host= dbname= user= password=");
+$db_conn = pg_connect("host=localhost dbname=DB_PROJ_BULANDA user= password=");
 
 /*
     to do (optionally)
@@ -86,10 +86,10 @@ $db_conn = pg_connect("host= dbname= user= password=");
     <form method="post">
 
         <div class="form-group">
-            <label for="secret_to_encrypt">Your secret passphrase: (UpperCase, LowerCase, Number/SpecialChar and min 8
+            <label for="password">Your password: (UpperCase, LowerCase, Number/SpecialChar and min 8
                 Chars)</label>
-            <input type="password" class="form-control" id="secret_to_encrypt" name="secret_to_encrypt"
-                   placeholder="please remember it as it is necessary to send your <?php echo($crypto_name); ?>"
+            <input type="password" class="form-control" id="password" name="password"
+                   placeholder="Make sure it contains all chars from set above"
                    pattern="(?=^.{8,}$)((?=.*\d)|(?=.*\W+))(?![.\n])(?=.*[A-Z])(?=.*[a-z]).*$"
                    required>
         </div>
@@ -104,40 +104,43 @@ $db_conn = pg_connect("host= dbname= user= password=");
 
     <?php
 
+    function generateRandomString($length = 10) {
+        $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        $charactersLength = strlen($characters);
+        $randomString = '';
+        for ($i = 0; $i < $length; $i++) {
+            $randomString .= $characters[rand(0, $charactersLength - 1)];
+        }
+        return $randomString;
+    }
+
     if (isset($_POST['create_wallet']) and $db_conn) {
 
-        // user defined secret phrase
-        $secret_to_encrypt = $_POST['secret_to_encrypt'];
-        // check if user did not overridden passphrase rules via frontend
-        $is_matching = preg_match('/(?=^.{8,}$)((?=.*\d)|(?=.*\W+))(?![.\n])(?=.*[A-Z])(?=.*[a-z]).*$/', $secret_to_encrypt);
+        // user defined password
+        $password = $_POST['password'];
+        // check if user did not overridden password rules via frontend
+        $is_matching = preg_match('/(?=^.{8,}$)((?=.*\d)|(?=.*\W+))(?![.\n])(?=.*[A-Z])(?=.*[a-z]).*$/', $password);
 
         if ($is_matching === 1) {
-            // no need to escape as it will be ciphered
-            // $secret_to_encrypt_escaped = pg_escape_string($secret_to_encrypt);
-            // generate new key pair
-            $res = openssl_pkey_new();
-            // Get private key
-            openssl_pkey_export($res, $private_key);
-            // Get public key
-            $public_key = openssl_pkey_get_details($res);
-            $public_key = $public_key['key'];
-            // encrypt secret with private key
-            openssl_private_encrypt($secret_to_encrypt, $secret_encrypted, $private_key);
-            $secret_encrypted_hashed = hash("sha256", $secret_encrypted);
-            $creation_query_output = pg_query($db_conn, "SELECT create_wallet('" . $secret_encrypted_hashed . "','" . $public_key . "')");
+            // no need to escape as it will be hashed
+            $password_hashed = hash("sha512", $password);
+            // prepare address for wallet
+            $epoch = time();
+            $random = generateRandomString(64);
+            $string = $epoch.$random;
+            $address = $crypto_name[0].'#'.hash("sha256", $string);
+            $creation_query_output = pg_query($db_conn, "SELECT create_wallet('" . $password_hashed . "','" . $address . "')");
 
             if ($creation_query_output) {
                 echo('<h3 class="mt-5 text-center text-success">Wallet creation succeed!</h3>');
-                echo('<label for="private_key">Your private key - necessary to send your crypto currency</label>');
-                echo('<input type="text" class="form-control" id="private_key" name="private_key" value="' . $private_key . '" disabled>');
-                echo('<label for="public_key">Your public key - check your wallet summary and share it when you want to trade with other people</label>');
-                echo('<input type="text" class="form-control" id="public_key" name="public_key" value="' . $public_key . '" disabled>');
-                echo('<h3 class="mt-5 text-center text-danger">Make sure to copy and store securely whole content of generated fields!</h3>');
+                echo('<label for="public_key">Address of generated wallet:</label>');
+                echo('<input type="text" class="form-control" id="address" name="address" value="' . $address . '" disabled>');
+                echo('<h3 class="mt-5 text-center text-danger">Make sure to copy and store securely whole content of generated field!</h3>');
             } else {
                 echo('<h3 class="mt-5 text-center text-danger">Something went wrong, please retry ' . $crypto_name . ' wallet creation</h3>');
             }
         } else {
-            echo('<h3 class="mt-5 text-center text-danger">Your secret passphrase does not meet conditions stated on our website</h3>');
+            echo('<h3 class="mt-5 text-center text-danger">Your password does not meet conditions stated on our website</h3>');
         }
     }
 
@@ -148,7 +151,7 @@ $db_conn = pg_connect("host= dbname= user= password=");
 <footer class="footer">
     <div class="container">
         <span class="text-bold"><a class="text-muted" target="_blank"
-                                   href="https://github.com/KBTMPL">github.com/KBTMPL</a> | components status: <?php if ($db_conn) {
+                                   href="https://github.com/KBTMPL/cryptowallet">github.com/KBTMPL</a> | components status: <?php if ($db_conn) {
                 echo('<span class="text-success">PostgreSQL</span>');
             } else {
                 echo('<span class="text-danger">PostgreSQL</span>');
