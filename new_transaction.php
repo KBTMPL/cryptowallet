@@ -6,19 +6,13 @@
  * Time: 20:27
  */
 
-// insert your fancy crypto currency name here
-$crypto_name = 'cryptocurrency';
-
-// enter root domain here ending with /
-$root = '';
-
-// establish connection to postgres database
-include 'postgresql_connection.php';
+include 'conf.php';
 
 /*
-    to do (optionally)
+    to do
     - transaction history
     - transaction troubleshooting
+    - unification of startup config to one file !!!
 */
 ?>
 
