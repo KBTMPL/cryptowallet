@@ -25,16 +25,54 @@ CREATE TABLE transactions (
 CREATE FUNCTION create_wallet (wallets.password_hashed%type, addresses.address%type) RETURNS bool as '
 DECLARE
 curr_address_id addresses.id%type;
+new_password_hashed wallets.password_hashed%type := $1;
+new_address addresses.address%type := $2;
 BEGIN
-INSERT INTO addresses (address) VALUES ($2);
-SELECT id INTO curr_address_id FROM addresses WHERE address=$2;
-INSERT INTO wallets (addresses_id, password_hashed) VALUES (curr_address_id, $1);
+INSERT INTO addresses (address) VALUES (new_address);
+SELECT id INTO curr_address_id FROM addresses WHERE address=new_address;
+INSERT INTO wallets (addresses_id, password_hashed) VALUES (curr_address_id, new_password_hashed);
 IF EXISTS (SELECT * FROM wallets WHERE addresses_id = curr_address_id) THEN
 RETURN true;
 ELSE
 RETURN false;
 END IF;
-
 END;
 ' language 'plpgsql';
 
+CREATE FUNCTION send_crypto (wallets.cryptocurrency_amount%type, addresses.address%type, addresses.address%type, wallets.password_hashed%type) RETURNS text as '
+DECLARE
+amount wallets.cryptocurrency_amount%type := $1;
+addr_from addresses.address%type := $2;
+addr_to addresses.address%type := $3;
+password_hashed_from wallets.password_hashed%type := $4;
+
+id_from addresses.id%type;
+id_to addresses.id%type;
+cryptocurrency_amount_from wallets.cryptocurrency_amount%type;
+cryptocurrency_amount_to wallets.cryptocurrency_amount%type;
+BEGIN
+IF NOT EXISTS (SELECT id FROM addresses WHERE address=addr_from) THEN
+RETURN ''There is no such source wallet'';
+ELSE
+SELECT id INTO id_from FROM addresses WHERE address=addr_from;
+END IF;
+
+IF NOT EXISTS (SELECT id FROM addresses WHERE address=addr_to) THEN
+RETURN ''There is no such destination wallet'';
+ELSE
+SELECT id INTO id_to FROM addresses WHERE address=addr_to;
+END IF;
+
+IF NOT EXISTS (SELECT * FROM wallets WHERE addresses_id=id_from AND password_hashed=password_hashed_from) THEN
+RETURN ''Your password and or wallet combination does not match database entries'';
+END IF;
+
+SELECT cryptocurrency_amount INTO cryptocurrency_amount_from FROM wallets WHERE addresses_id=id_from AND password_hashed=password_hashed_from FOR UPDATE;
+SELECT cryptocurrency_amount INTO cryptocurrency_amount_to FROM wallets WHERE addresses_id=id_to FOR UPDATE;
+
+UPDATE wallets SET cryptocurrency_amount = cryptocurrency_amount_from-amount WHERE addresses_id=id_from AND password_hashed=password_hashed_from;
+UPDATE wallets SET cryptocurrency_amount = cryptocurrency_amount_to+amount WHERE addresses_id=id_to;
+
+RETURN ''Transfer succesfully completed'';
+END;
+' language 'plpgsql';
