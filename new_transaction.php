@@ -106,16 +106,6 @@ include 'conf.php';
 
     <?php
 
-    function generateRandomString($length) {
-        $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        $charactersLength = strlen($characters);
-        $randomString = '';
-        for ($i = 0; $i < $length; $i++) {
-            $randomString .= $characters[rand(0, $charactersLength - 1)];
-        }
-        return $randomString;
-    }
-
     $addr_from = $_POST['f_addr_from'];
     $addr_to = $_POST['f_addr_to'];
     $amount = $_POST['f_amount'];
@@ -126,13 +116,14 @@ include 'conf.php';
             $amount = str_replace(',', '.', $amount);
         }
         if (is_numeric($amount)) {
-            $addr_from_escaped = pg_escape_string($addr_from);
-            $addr_to_escaped = pg_escape_string($addr_to);
+            $addr_from_escaped = pg_escape_string(trim($addr_from));
+            $addr_to_escaped = pg_escape_string(trim($addr_to));
             $password_hashed = hash("sha512", $password);
             $epoch = time();
-            $random = generateRandomString(16);
-            $sending_query_output = pg_query($db_conn, "SELECT send_crypto(" . $amount . ",'" . $addr_from_escaped . "','" . $addr_to_escaped . "','" . $password_hashed . "'," . $epoch . ",'" . $random . "');");
-            echo('<h3 class="mt-5 text-center text-info">'.pg_fetch_row($sending_query_output)[0].'</h3>');
+            $sending_query_output = pg_query($db_conn, "SELECT send_crypto(" . $amount . ",'" . $addr_from_escaped . "','" . $addr_to_escaped . "','" . $password_hashed . "'," . $epoch . ");");
+            header("Location: " . $root . "result.php?id=" . pg_fetch_row($sending_query_output)[0]);
+            exit;
+            //echo('<h3 class="mt-5 text-center text-info">'.pg_fetch_row($sending_query_output)[0].'</h3>');
         } else {
             echo('<h3 class="mt-5 text-center text-danger">Amount of ' . $crypto_name . ' you want to send is not a number</h3>');
         }

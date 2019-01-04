@@ -97,7 +97,7 @@ include 'conf.php';
 
     <?php
 
-    function generateRandomString($length = 10) {
+    function generateRandomString($length) {
         $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
         $charactersLength = strlen($characters);
         $randomString = '';
@@ -122,7 +122,7 @@ include 'conf.php';
             $random = generateRandomString(64);
             $string = $epoch.$random;
             $address = $crypto_name[0].'#'.hash("sha256", $string);
-            $creation_query_output = pg_query($db_conn, "SELECT create_wallet('" . $password_hashed . "','" . $address . "')");
+            $creation_query_output = pg_query($db_conn, "SELECT create_wallet('" . $password_hashed . "','" . $address . "');");
 
             if ($creation_query_output) {
                 echo('<h3 class="mt-5 text-center text-success">Wallet creation succeed!</h3>');

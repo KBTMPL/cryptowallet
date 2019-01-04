@@ -20,7 +20,6 @@ CREATE TABLE transactions (
 	id_to int,
 	timestamp bigint,
 	tr_amount double precision NOT NULL,
-	random_identifier text NOT NULL,
 	CHECK(tr_amount>0)
 );
 
@@ -41,15 +40,13 @@ END IF;
 END;
 ' language 'plpgsql';
 
-CREATE FUNCTION send_crypto (wallets.cryptocurrency_amount%type, addresses.address%type, addresses.address%type, wallets.password_hashed%type, transactions.timestamp%type, transactions.random_identifier%type) RETURNS text as '
+CREATE FUNCTION send_crypto (wallets.cryptocurrency_amount%type, addresses.address%type, addresses.address%type, wallets.password_hashed%type, transactions.timestamp%type) RETURNS int as '
 DECLARE
 amount wallets.cryptocurrency_amount%type := $1;
 addr_from addresses.address%type := $2;
 addr_to addresses.address%type := $3;
 password_hashed_from wallets.password_hashed%type := $4;
 epoch transactions.timestamp%type := $5;
-random transactions.random_identifier%type := $6;
-
 id_from_temp addresses.id%type;
 id_to_temp addresses.id%type;
 cryptocurrency_amount_from wallets.cryptocurrency_amount%type;
@@ -58,47 +55,43 @@ cryptocurrency_amount_to wallets.cryptocurrency_amount%type;
 BEGIN
 
 IF amount<=0 THEN
-RETURN ''You can not send 0 or less crypto in a transfer'';
+RETURN 1;
 END IF;
 
 IF NOT EXISTS (SELECT id FROM addresses WHERE address=addr_from) THEN
-RETURN ''There is no such source wallet'';
+RETURN 2;
 ELSE
 SELECT id INTO id_from_temp FROM addresses WHERE address=addr_from;
 END IF;
 
 IF NOT EXISTS (SELECT id FROM addresses WHERE address=addr_to) THEN
-RETURN ''There is no such destination wallet'';
+RETURN 3;
 ELSE
 SELECT id INTO id_to_temp FROM addresses WHERE address=addr_to;
 END IF;
 
 IF NOT EXISTS (SELECT * FROM wallets WHERE addresses_id=id_from_temp AND password_hashed=password_hashed_from) THEN
-RETURN ''Your password and or wallet combination does not match database entries'';
-END IF;
-
-IF EXISTS (SELECT * FROM transactions WHERE id_from=id_from_temp and id_to=id_to_temp and timestamp=epoch and tr_amount=amount and random_identifier!=random) THEN
-RETURN ''This transaction has been processed once already'';
+RETURN 4;
 END IF;
 
 SELECT cryptocurrency_amount INTO cryptocurrency_amount_from FROM wallets WHERE addresses_id=id_from_temp AND password_hashed=password_hashed_from FOR UPDATE;
 SELECT cryptocurrency_amount INTO cryptocurrency_amount_to FROM wallets WHERE addresses_id=id_to_temp FOR UPDATE;
 
 IF cryptocurrency_amount_from-amount<0_from_after THEN
-RETURN ''Your current balance is too low to proceed with this transfer'';
+RETURN 5;
 END IF;
 
 UPDATE wallets SET cryptocurrency_amount = cryptocurrency_amount_from-amount WHERE addresses_id=id_from_temp AND password_hashed=password_hashed_from;
 SELECT cryptocurrency_amount INTO cryptocurrency_amount_from_after FROM wallets WHERE addresses_id=id_from_temp AND password_hashed=password_hashed_from FOR UPDATE;
 
 IF cryptocurrency_amount_from = cryptocurrency_amount_from_after THEN
-RETURN ''Transfer was aborted please try again'';
+RETURN 6;
 END IF;
 
 UPDATE wallets SET cryptocurrency_amount = cryptocurrency_amount_to+amount WHERE addresses_id=id_to_temp;
 
-INSERT INTO transactions (id_from, id_to, timestamp, tr_amount, random_identifier) VALUES (id_from_temp, id_to_temp, epoch, amount, random);
+INSERT INTO transactions (id_from, id_to, timestamp, tr_amount) VALUES (id_from_temp, id_to_temp, epoch, amount);
 
-RETURN ''Transfer succesfully completed'';
+RETURN 7;
 END;
 ' language 'plpgsql';
