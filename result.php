@@ -9,8 +9,8 @@
 include 'conf.php';
 
 /*
-    to do
-    - error printing
+    to do (optionally)
+    - will see
 */
 ?>
 

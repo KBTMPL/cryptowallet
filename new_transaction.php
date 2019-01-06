@@ -9,9 +9,9 @@
 include 'conf.php';
 
 /*
-    to do
-    - transaction history
-    - issue with refreshing after transaction !!!
+    to do (optionally)
+    - will see
+
 */
 ?>
 
@@ -91,7 +91,6 @@ include 'conf.php';
             $sending_query_output = pg_query($db_conn, "SELECT send_crypto(" . $amount . ",'" . $addr_from_escaped . "','" . $addr_to_escaped . "','" . $password_hashed . "'," . $epoch . ");");
             header("Location: " . $root . "result.php?id=" . pg_fetch_row($sending_query_output)[0]);
             exit;
-            //echo('<h3 class="mt-5 text-center text-info">'.pg_fetch_row($sending_query_output)[0].'</h3>');
         } else {
             echo('<h3 class="mt-5 text-center text-danger">Amount of ' . $crypto_name . ' you want to send is not a number</h3>');
         }

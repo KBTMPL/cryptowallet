@@ -9,7 +9,8 @@ CREATE TABLE wallets (
         id int PRIMARY KEY DEFAULT nextval('seq_wallet'),
         addresses_id int REFERENCES addresses(id) ON UPDATE RESTRICT ON DELETE RESTRICT,
         cryptocurrency_amount double precision DEFAULT 0,
-        password_hashed text NOT NULL
+        password_hashed text NOT NULL,
+        delete_code_hashed text NOT NULL,
         CHECK(cryptocurrency_amount>=0)
 );
 
@@ -23,15 +24,16 @@ CREATE TABLE transactions (
 	CHECK(tr_amount>0)
 );
 
-CREATE FUNCTION create_wallet (wallets.password_hashed%type, addresses.address%type) RETURNS bool as '
+CREATE FUNCTION create_wallet (wallets.password_hashed%type, addresses.address%type, wallets.delete_code_hashed%type) RETURNS bool as '
 DECLARE
 curr_address_id addresses.id%type;
 new_password_hashed wallets.password_hashed%type := $1;
 new_address addresses.address%type := $2;
+new_delete_code_hashed wallets.delete_code_hashed%type := $3;
 BEGIN
 INSERT INTO addresses (address) VALUES (new_address);
 SELECT id INTO curr_address_id FROM addresses WHERE address=new_address;
-INSERT INTO wallets (addresses_id, password_hashed) VALUES (curr_address_id, new_password_hashed);
+INSERT INTO wallets (addresses_id, password_hashed, delete_code_hashed) VALUES (curr_address_id, new_password_hashed, new_delete_code_hashed);
 IF EXISTS (SELECT * FROM wallets WHERE addresses_id = curr_address_id) THEN
 RETURN true;
 ELSE
@@ -54,6 +56,9 @@ cryptocurrency_amount_from_after wallets.cryptocurrency_amount%type;
 cryptocurrency_amount_to wallets.cryptocurrency_amount%type;
 BEGIN
 
+SELECT cryptocurrency_amount INTO cryptocurrency_amount_from FROM wallets WHERE addresses_id=id_from_temp AND password_hashed=password_hashed_from FOR UPDATE;
+SELECT cryptocurrency_amount INTO cryptocurrency_amount_to FROM wallets WHERE addresses_id=id_to_temp FOR UPDATE;
+
 IF amount<=0 THEN
 RETURN 1;
 END IF;
@@ -73,9 +78,6 @@ END IF;
 IF NOT EXISTS (SELECT * FROM wallets WHERE addresses_id=id_from_temp AND password_hashed=password_hashed_from) THEN
 RETURN 4;
 END IF;
-
-SELECT cryptocurrency_amount INTO cryptocurrency_amount_from FROM wallets WHERE addresses_id=id_from_temp AND password_hashed=password_hashed_from FOR UPDATE;
-SELECT cryptocurrency_amount INTO cryptocurrency_amount_to FROM wallets WHERE addresses_id=id_to_temp FOR UPDATE;
 
 IF cryptocurrency_amount_from-amount<0_from_after THEN
 RETURN 5;

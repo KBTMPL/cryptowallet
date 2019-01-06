@@ -65,7 +65,8 @@ include 'conf.php';
 
     <?php
 
-    function generateRandomString($length) {
+    function generateRandomString($length)
+    {
         $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
         $charactersLength = strlen($characters);
         $randomString = '';
@@ -88,15 +89,19 @@ include 'conf.php';
             // prepare address for wallet
             $epoch = time();
             $random = generateRandomString(64);
-            $string = $epoch.$random;
-            $address = $crypto_name[0].'#'.hash("sha256", $string);
-            $creation_query_output = pg_query($db_conn, "SELECT create_wallet('" . $password_hashed . "','" . $address . "');");
+            $string = $epoch . $random;
+            $address = $crypto_name[0] . '#' . hash("sha256", $string);
+            $delete_code = generateRandomString(8);
+            $delete_code_hashed = hash("sha512", $delete_code);
+            $creation_query_output = pg_query($db_conn, "SELECT create_wallet('" . $password_hashed . "','" . $address . "','" . $delete_code_hashed . "');");
 
             if ($creation_query_output) {
-                echo('<h3 class="mt-5 text-center text-success">Wallet creation succeed!</h3>');
-                echo('<label for="public_key">Address of generated wallet:</label>');
+                echo('<h3 class="mt-5 text-center text-success">Wallet creation succeeded!</h3>');
+                echo('<div class="form-group"><label for="public_key">Address of generated wallet:</label>');
                 echo('<input type="text" class="form-control" id="address" name="address" value="' . $address . '" disabled>');
-                echo('<h3 class="mt-5 text-center text-danger">Make sure to copy and store securely whole content of generated field!</h3>');
+                echo('<label for="public_key">Delete code of generated wallet:</label>');
+                echo('<input type="text" class="form-control" id="delete_code" name="delete_code" value="' . $delete_code . '" disabled></div>');
+                echo('<h3 class="mt-5 text-center text-danger">Make sure to copy and store securely whole content of generated fields!</h3>');
             } else {
                 echo('<h3 class="mt-5 text-center text-danger">Something went wrong, please retry ' . $crypto_name . ' wallet creation</h3>');
             }

@@ -9,8 +9,8 @@
 include 'conf.php';
 
 /*
-    to do
-    - to show curr balance and transaction history on
+    to do (optionally)
+    - will see
 */
 
 ?>
@@ -94,10 +94,18 @@ include 'conf.php';
 
                     if ($a_from === $addr_escaped) {
                         $a_from = '<b>' . $a_from . '</b>';
+                        $flow_flag = false;
                     }
 
                     if ($a_to === $addr_escaped) {
                         $a_to = '<b>' . $a_to . '</b>';
+                        $flow_flag = true;
+                    }
+
+                    if ($flow_flag) {
+                        $tr_amount = '<b class="text-success">' . $tr_amount . '</b>';
+                    } else {
+                        $tr_amount = '<b class="text-danger">' . $tr_amount . '</b>';
                     }
 
                     echo('<tr><td>' . date("d-m-Y H:i:s", $ts) . '</td><td>' . $a_from . '</td><td>' . $a_to . '</td><td>' . $tr_amount . '</td></tr>');
