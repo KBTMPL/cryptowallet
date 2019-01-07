@@ -74,45 +74,46 @@ include 'conf.php';
 
         if (is_numeric($addr_id)) {
 
-            $amount_query_output = pg_query($db_conn, "SELECT cryptocurrency_amount as amount FROM wallets WHERE addresses_id = '" . $addr_id . "';");
-            $amount = pg_fetch_assoc($amount_query_output)['amount'];
+            $amount_query_output = pg_query($db_conn, "SELECT id, cryptocurrency_amount as amount FROM wallets WHERE addresses_id = " . $addr_id . ";");
+            $row = pg_fetch_assoc($amount_query_output);
+            $id = $row['id'];
+            $amount = $row['amount'];
 
-            if (is_numeric($amount)) {
+            if (is_numeric($id)) {
                 echo('<h3 class="mt-5 text-center">Current ' . $crypto_name . ' amount: ' . $amount . '</h3><br />');
+                $history_query_output = pg_query($db_conn, "SELECT timestamp as ts, (SELECT a.address FROM addresses a WHERE a.id = t.id_from) as a_from, (SELECT a.address FROM addresses a WHERE a.id = t.id_to) as a_to, t.tr_amount as amount FROM transactions t WHERE t.id_from = " . $addr_id . " OR t.id_to = " . $addr_id . " ORDER BY ts ASC;");
+                if ($history_query_output) {
+                    echo('<div class="table-responsive"><table class="table table-striped"><thead><tr><th scope="col">Date</th><th scope="col">From</th><th scope="col">To</th><th scope="col">Amount</th></tr></thead><tbody>');
+                    while ($history_row = pg_fetch_assoc($history_query_output)) {
+                        $ts = $history_row["ts"];
+                        $a_from = $history_row["a_from"];
+                        $a_to = $history_row["a_to"];
+                        $tr_amount = $history_row["amount"];
+
+                        if ($a_from === $addr_escaped) {
+                            $a_from = '<b>' . $a_from . '</b>';
+                            $flow_flag = false;
+                        }
+
+                        if ($a_to === $addr_escaped) {
+                            $a_to = '<b>' . $a_to . '</b>';
+                            $flow_flag = true;
+                        }
+
+                        if ($flow_flag) {
+                            $tr_amount = '<b class="text-success">' . $tr_amount . '</b>';
+                        } else {
+                            $tr_amount = '<b class="text-danger">' . $tr_amount . '</b>';
+                        }
+
+                        echo('<tr><td>' . date("d-m-Y H:i:s", $ts) . '</td><td>' . $a_from . '</td><td>' . $a_to . '</td><td>' . $tr_amount . '</td></tr>');
+                    }
+                    echo('</tbody></table></div>');
+                } else {
+                    echo('<h3 class="mt-5 text-center text-danger">This ' . $crypto_name . ' address has no transfer history</h3>');
+                }
             } else {
                 echo('<h3 class="mt-5 text-center">There is no ' . $crypto_name . ' wallet associated to this address</h3>');
-            }
-
-            $history_query_output = pg_query($db_conn, "SELECT timestamp as ts, (SELECT a.address FROM addresses a WHERE a.id = t.id_from) as a_from, (SELECT a.address FROM addresses a WHERE a.id = t.id_to) as a_to, t.tr_amount as amount FROM transactions t WHERE t.id_from = '" . $addr_id . "' OR t.id_to = '" . $addr_id . "' ORDER BY ts ASC;");
-            if ($history_query_output) {
-                echo('<div class="table-responsive"><table class="table table-striped"><thead><tr><th scope="col">Date</th><th scope="col">From</th><th scope="col">To</th><th scope="col">Amount</th></tr></thead><tbody>');
-                while ($history_row = pg_fetch_assoc($history_query_output)) {
-                    $ts = $history_row["ts"];
-                    $a_from = $history_row["a_from"];
-                    $a_to = $history_row["a_to"];
-                    $tr_amount = $history_row["amount"];
-
-                    if ($a_from === $addr_escaped) {
-                        $a_from = '<b>' . $a_from . '</b>';
-                        $flow_flag = false;
-                    }
-
-                    if ($a_to === $addr_escaped) {
-                        $a_to = '<b>' . $a_to . '</b>';
-                        $flow_flag = true;
-                    }
-
-                    if ($flow_flag) {
-                        $tr_amount = '<b class="text-success">' . $tr_amount . '</b>';
-                    } else {
-                        $tr_amount = '<b class="text-danger">' . $tr_amount . '</b>';
-                    }
-
-                    echo('<tr><td>' . date("d-m-Y H:i:s", $ts) . '</td><td>' . $a_from . '</td><td>' . $a_to . '</td><td>' . $tr_amount . '</td></tr>');
-                }
-                echo('</tbody></table></div>');
-            } else {
-                echo('<h3 class="mt-5 text-center text-danger">This ' . $crypto_name . ' address has no transfer history</h3>');
             }
         } else {
             echo('<h3 class="mt-5 text-center text-danger">There is no such ' . $crypto_name . ' address</h3>');

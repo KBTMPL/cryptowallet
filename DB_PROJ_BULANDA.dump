@@ -56,9 +56,6 @@ cryptocurrency_amount_from_after wallets.cryptocurrency_amount%type;
 cryptocurrency_amount_to wallets.cryptocurrency_amount%type;
 BEGIN
 
-SELECT cryptocurrency_amount INTO cryptocurrency_amount_from FROM wallets WHERE addresses_id=id_from_temp AND password_hashed=password_hashed_from FOR UPDATE;
-SELECT cryptocurrency_amount INTO cryptocurrency_amount_to FROM wallets WHERE addresses_id=id_to_temp FOR UPDATE;
-
 IF amount<=0 THEN
 RETURN 1;
 END IF;
@@ -67,12 +64,14 @@ IF NOT EXISTS (SELECT id FROM addresses WHERE address=addr_from) THEN
 RETURN 2;
 ELSE
 SELECT id INTO id_from_temp FROM addresses WHERE address=addr_from;
+SELECT cryptocurrency_amount INTO cryptocurrency_amount_from FROM wallets WHERE addresses_id=id_from_temp AND password_hashed=password_hashed_from FOR UPDATE;
 END IF;
 
 IF NOT EXISTS (SELECT id FROM addresses WHERE address=addr_to) THEN
 RETURN 3;
 ELSE
 SELECT id INTO id_to_temp FROM addresses WHERE address=addr_to;
+SELECT cryptocurrency_amount INTO cryptocurrency_amount_to FROM wallets WHERE addresses_id=id_to_temp FOR UPDATE;
 END IF;
 
 IF NOT EXISTS (SELECT * FROM wallets WHERE addresses_id=id_from_temp AND password_hashed=password_hashed_from) THEN
