@@ -8,7 +8,7 @@ CREATE SEQUENCE seq_wallet;
 CREATE TABLE wallets (
         id int PRIMARY KEY DEFAULT nextval('seq_wallet'),
         addresses_id int REFERENCES addresses(id) ON UPDATE RESTRICT ON DELETE RESTRICT,
-        cryptocurrency_amount double precision DEFAULT 0,
+        cryptocurrency_amount double precision NOT NULL DEFAULT 0,
         password_hashed text NOT NULL,
         delete_code_hashed text NOT NULL,
         CHECK(cryptocurrency_amount>=0)
